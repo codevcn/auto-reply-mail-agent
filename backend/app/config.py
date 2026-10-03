@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -79,7 +79,11 @@ class Settings(BaseSettings):
     # AI Provider Settings (Invariant R-19 & R-07)
     AI_PROVIDER_TYPE: str = Field(
         default="mock",
-        description="Active AI Provider type: mock or vertex_gemini",
+        description="Active AI Provider type: mock, vertex, vertex_gemini, or gemini",
+    )
+    GEMINI_API_KEY: str | None = Field(
+        default=None,
+        description="Google AI Studio Gemini API key (alternative to Vertex AI Service Account)",
     )
     VERTEX_AI_PROJECT_ID: str = Field(
         default="wrydeco-mail-agent",
@@ -90,12 +94,12 @@ class Settings(BaseSettings):
         description="Google Cloud region for Vertex AI",
     )
     VERTEX_AI_CLASSIFICATION_MODEL: str = Field(
-        default="gemini-1.5-flash-002",
-        description="Vertex AI model identifier for classification",
+        default="gemini-2.0-flash",
+        description="Vertex AI model identifier for classification (e.g. gemini-2.0-flash, gemini-1.5-flash)",
     )
     VERTEX_AI_DRAFTING_MODEL: str = Field(
-        default="gemini-1.5-pro-002",
-        description="Vertex AI model identifier for reply draft generation",
+        default="gemini-2.0-flash",
+        description="Vertex AI model identifier for reply draft generation (e.g. gemini-2.0-flash, gemini-1.5-pro)",
     )
     VERTEX_AI_CREDENTIALS_PATH: str | None = Field(
         default=None,
@@ -105,6 +109,20 @@ class Settings(BaseSettings):
         default=30.0,
         description="Timeout in seconds for Vertex AI HTTP requests",
     )
+
+    @model_validator(mode="after")
+    def resolve_gcp_fallbacks(self) -> "Settings":
+        import os
+
+        if self.VERTEX_AI_PROJECT_ID == "wrydeco-mail-agent" and os.environ.get("GCP_PROJECT_ID"):
+            self.VERTEX_AI_PROJECT_ID = os.environ["GCP_PROJECT_ID"]
+        if self.VERTEX_AI_LOCATION == "us-central1" and os.environ.get("GCP_LOCATION"):
+            self.VERTEX_AI_LOCATION = os.environ["GCP_LOCATION"]
+        if not self.VERTEX_AI_CREDENTIALS_PATH and os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+            self.VERTEX_AI_CREDENTIALS_PATH = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+        if not self.GEMINI_API_KEY and os.environ.get("GEMINI_API_KEY"):
+            self.GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+        return self
 
     # Retention Settings (Invariant R-34: strictly <= 120 days)
     RETENTION_DAYS: int = Field(

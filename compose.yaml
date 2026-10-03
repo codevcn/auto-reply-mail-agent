@@ -27,15 +27,27 @@ services:
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
       - GCP_LOCATION=${GCP_LOCATION:-us-central1}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-sa.json
+      - AI_PROVIDER_TYPE=${AI_PROVIDER_TYPE:-mock}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - VERTEX_AI_PROJECT_ID=${GCP_PROJECT_ID}
+      - VERTEX_AI_LOCATION=${GCP_LOCATION:-us-central1}
+      - VERTEX_AI_CLASSIFICATION_MODEL=${VERTEX_AI_CLASSIFICATION_MODEL:-gemini-2.0-flash}
+      - VERTEX_AI_DRAFTING_MODEL=${VERTEX_AI_DRAFTING_MODEL:-gemini-2.0-flash}
+      - VERTEX_AI_CREDENTIALS_PATH=/app/credentials/google-sa.json
       - RETENTION_DAYS=${RETENTION_DAYS:-120}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
+    volumes:
+      - ./credentials:/app/credentials:ro
     depends_on:
       mail-agent-db:
         condition: service_healthy
+    extra_hosts:
+      - "mail.wrydeco.com:172.19.0.2"
     networks:
       - mail-agent-net
+      - mailnet
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health/live')\" || exit 1"]
       interval: 15s
@@ -73,15 +85,27 @@ services:
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
       - GCP_LOCATION=${GCP_LOCATION:-us-central1}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-sa.json
+      - AI_PROVIDER_TYPE=${AI_PROVIDER_TYPE:-mock}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - VERTEX_AI_PROJECT_ID=${GCP_PROJECT_ID}
+      - VERTEX_AI_LOCATION=${GCP_LOCATION:-us-central1}
+      - VERTEX_AI_CLASSIFICATION_MODEL=${VERTEX_AI_CLASSIFICATION_MODEL:-gemini-2.0-flash}
+      - VERTEX_AI_DRAFTING_MODEL=${VERTEX_AI_DRAFTING_MODEL:-gemini-2.0-flash}
+      - VERTEX_AI_CREDENTIALS_PATH=/app/credentials/google-sa.json
       - RETENTION_DAYS=${RETENTION_DAYS:-120}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
+    volumes:
+      - ./credentials:/app/credentials:ro
     depends_on:
       mail-agent-db:
         condition: service_healthy
+    extra_hosts:
+      - "mail.wrydeco.com:172.19.0.2"
     networks:
       - mail-agent-net
+      - mailnet
     logging:
       driver: "json-file"
       options:
@@ -133,6 +157,9 @@ networks:
   mail-agent-net:
     name: mail-agent-net
     driver: bridge
+  mailnet:
+    external: true
+    name: mailserver_default
 
 volumes:
   mail_agent_pgdata:

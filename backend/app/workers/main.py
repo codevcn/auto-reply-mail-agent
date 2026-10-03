@@ -19,6 +19,7 @@ import sys
 from app.config import get_settings
 from app.core.logging import setup_logging
 from app.db.session import AsyncSessionLocal
+from app.ingestion.reconciliation import ReconciliationPoller
 from app.queue.service import TransactionalQueueService
 from app.retention.scheduler import RetentionScheduler
 
@@ -37,6 +38,7 @@ class MailAgentWorker:
             retention_days=self.settings.RETENTION_DAYS,
             batch_size=self.settings.RETENTION_BATCH_SIZE,
         )
+        self.reconciliation_poller = ReconciliationPoller(interval_seconds=30)
 
     async def run_queue_loop(self) -> None:
         """Polls and processes queue jobs with exponential backoff on idle."""
@@ -84,18 +86,21 @@ class MailAgentWorker:
             extra_secrets=[self.settings.SECRET_KEY],
         )
 
-        # Run both queue consumer and retention scheduler concurrently
+        # Run queue consumer, retention scheduler, and reconciliation poller concurrently
         scheduler_task = asyncio.create_task(self.retention_scheduler.start())
         queue_task = asyncio.create_task(self.run_queue_loop())
+        poller_task = asyncio.create_task(self.reconciliation_poller.start(AsyncSessionLocal))
 
         try:
             await self.stop_event.wait()
         finally:
             logger.info("Stopping worker gracefully...")
             self.retention_scheduler.stop()
+            self.reconciliation_poller.stop()
             queue_task.cancel()
             scheduler_task.cancel()
-            await asyncio.gather(queue_task, scheduler_task, return_exceptions=True)
+            poller_task.cancel()
+            await asyncio.gather(queue_task, scheduler_task, poller_task, return_exceptions=True)
             logger.info("Worker shutdown complete.")
 
     def stop(self) -> None:

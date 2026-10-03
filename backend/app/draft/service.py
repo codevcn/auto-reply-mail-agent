@@ -163,10 +163,20 @@ class DraftService:
             detected_language=email.detected_language or target_lang,
             requires_manual_review=False,
         )
+        # Fetch actual customer body text on-demand from IMAP PEEK (R-04)
+        customer_body = email.subject or ""
+        try:
+            from app.ingestion.service import MailFetchService
+            fetched = await MailFetchService.fetch_email_content(session, email.id)
+            if fetched and fetched.body_text:
+                customer_body = fetched.body_text
+        except Exception:
+            pass
+
         draft_input = DraftGenerationInput(
             email_id=email.id,
             subject=email.subject or "Support Inquiry",
-            body_text=email.subject or "",
+            body_text=customer_body,
             classification=class_res,
             order_snapshot=order_snap.__dict__ if order_snap else None,
             product_snapshot=prod_snap.__dict__ if prod_snap else None,
@@ -407,10 +417,20 @@ class DraftService:
             detected_language=resolved_lang,
             requires_manual_review=False,
         )
+        # Fetch actual customer body text on-demand from IMAP PEEK (R-04)
+        customer_body = email.subject or ""
+        try:
+            from app.ingestion.service import MailFetchService
+            fetched = await MailFetchService.fetch_email_content(session, email.id)
+            if fetched and fetched.body_text:
+                customer_body = fetched.body_text
+        except Exception:
+            pass
+
         draft_input = DraftGenerationInput(
             email_id=email.id,
             subject=email.subject or "Support Inquiry",
-            body_text=email.subject or "",
+            body_text=customer_body,
             classification=class_res,
             order_snapshot=order_snap.__dict__ if order_snap else None,
             product_snapshot=prod_snap.__dict__ if prod_snap else None,

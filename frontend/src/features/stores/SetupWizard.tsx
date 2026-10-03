@@ -191,6 +191,8 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
           client_secret: formData.shopify_client_secret,
           proxy_host: formData.proxy_host,
           proxy_port: parseInt(formData.proxy_port, 10) || 1080,
+          proxy_username: formData.proxy_username || undefined,
+          proxy_password: formData.proxy_password || undefined,
         }),
       });
       if (res.ok) {
@@ -227,9 +229,35 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
   const handleActivateStore = async () => {
     setIsActivating(true);
     try {
-      // 1. Create or ensure store is created
+      // 1. Create proxy profile if host provided
+      let proxyProfileId: string | undefined = undefined;
+      if (formData.proxy_host) {
+        try {
+          const proxyRes = await fetch("/api/proxies", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: `${formData.brand_name || formData.name} Proxy`,
+              protocol: "socks5",
+              host: formData.proxy_host,
+              port: parseInt(formData.proxy_port, 10) || 1080,
+              username: formData.proxy_username || undefined,
+              password: formData.proxy_password || undefined,
+              enabled: true,
+            }),
+          });
+          if (proxyRes.ok) {
+            const pData = await proxyRes.json();
+            proxyProfileId = pData.id;
+          }
+        } catch {
+          // ignore proxy create error
+        }
+      }
+
+      // 2. Create or ensure store is created
       try {
-        await fetch("/api/stores", {
+        const storeRes = await fetch("/api/stores", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -243,10 +271,24 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
             email_signature: formData.email_signature,
             brand_description: formData.brand_description,
             default_language: formData.default_language,
+            proxy_profile_id: proxyProfileId,
             shopify_client_id: formData.shopify_client_id,
             shopify_client_secret: formData.shopify_client_secret,
           }),
         });
+
+        if (storeRes.ok) {
+          const storeData = await storeRes.json();
+          await fetch(`/api/stores/${storeData.id}/activate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mailbox_tested: mailboxStatus.success,
+              proxy_tested: proxyStatus.success,
+              shopify_tested: shopifyStatus.success,
+            }),
+          });
+        }
       } catch {
         // ignore create error if already created
       }

@@ -25,8 +25,6 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-try:
-    import paramiko
 import getpass
 import secrets
 
@@ -89,15 +87,9 @@ def run_remote(ssh, cmd, use_sudo=True, timeout=180, check=True):
     return out
 
 def step_1_build_frontend():
-    log("Step 1: Checking and building frontend distribution...", "STEP")
-    dist_dir = ROOT_DIR / "frontend" / "dist"
-    index_html = dist_dir / "index.html"
-
-    if not index_html.exists():
-        log("frontend/dist not found. Running 'npm run build'...", "INFO")
-        run_local("npm run build", cwd=ROOT_DIR / "frontend")
-    else:
-        log("frontend/dist already built and ready.", "SUCCESS")
+    log("Step 1: Building latest frontend distribution (npm run build)...", "STEP")
+    run_local("npm run build", cwd=ROOT_DIR / "frontend")
+    log("frontend/dist built and ready for deployment.", "SUCCESS")
 
 def step_2_package_project():
     log("Step 2: Packaging clean project archive (.tar.gz)...", "STEP")

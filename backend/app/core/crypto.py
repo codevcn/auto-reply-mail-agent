@@ -86,7 +86,10 @@ def _get_master_keys() -> dict[str, bytes]:
         master_key_env = getattr(settings, "SECRET_KEY", "fallback_dev_master_key_min_32_bytes_long!")
 
     active_version = getattr(settings, "SECRET_KEY_VERSION", DEFAULT_KEY_VERSION)
-    keys: dict[str, bytes] = {active_version: derive_256bit_key(master_key_env)}
+    if str(active_version) == "1":
+        active_version = "v1"
+    derived = derive_256bit_key(master_key_env)
+    keys: dict[str, bytes] = {active_version: derived, "1": derived, "v1": derived}
 
     # Check for legacy or rotated keys
     old_keys_env = os.environ.get("PREVIOUS_MASTER_ENCRYPTION_KEYS")
@@ -139,6 +142,8 @@ def encrypt_secret(plaintext: str | None, key_version: str | None = None) -> str
     keys = _get_master_keys()
     settings = get_settings()
     version = key_version or getattr(settings, "SECRET_KEY_VERSION", DEFAULT_KEY_VERSION)
+    if str(version) == "1":
+        version = "v1"
 
     if version not in keys:
         raise KeyNotFoundError(f"Encryption key version '{version}' is not registered.")

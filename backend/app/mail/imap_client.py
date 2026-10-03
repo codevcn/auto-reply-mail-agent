@@ -67,6 +67,13 @@ class IMAPClient:
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         return ctx
 
+    @staticmethod
+    def _examine_folder(client: imaplib.IMAP4_SSL | imaplib.IMAP4, folder: str = "INBOX"):
+        """Issues IMAP EXAMINE in read-only mode adhering to Invariant R-06."""
+        if hasattr(client, "examine") and callable(getattr(client, "examine")):
+            return client.examine(folder)
+        return client.select(folder, readonly=True)
+
     def _sync_test_connection(self) -> IMAPTestResult:
         start_time = time.perf_counter()
         client: imaplib.IMAP4 | None = None
@@ -97,7 +104,7 @@ class IMAPClient:
                 )
 
             # Read-only inspect INBOX (EXAMINE command strictly avoids any flag modification - R-06)
-            res_code, select_data = client.examine("INBOX")
+            res_code, select_data = self._examine_folder(client, "INBOX")
             if res_code != "OK":
                 latency = int((time.perf_counter() - start_time) * 1000)
                 return IMAPTestResult(
@@ -213,7 +220,7 @@ class IMAPClient:
         )
         try:
             client.login(self.username, self.password)
-            client.examine(folder)  # Read-only
+            self._examine_folder(client, folder)  # Read-only (issues EXAMINE)
             search_query = f"UID {min_uid + 1}:*"
             res, data = client.uid("SEARCH", search_query)
             if res != "OK" or not data or not data[0]:
@@ -237,7 +244,7 @@ class IMAPClient:
                 host=self.host, port=self.port, ssl_context=ssl_ctx, timeout=self.timeout_seconds
             )
             client.login(self.username, self.password)
-            client.examine(folder)  # Read-only mode
+            self._examine_folder(client, folder)  # Read-only mode (issues EXAMINE)
 
             # CRITICAL INVARIANT R-06: MUST USE BODY.PEEK
             fetch_cmd = (
@@ -310,7 +317,7 @@ class IMAPClient:
                 host=self.host, port=self.port, ssl_context=ssl_ctx, timeout=self.timeout_seconds
             )
             client.login(self.username, self.password)
-            client.examine(folder)
+            self._examine_folder(client, folder)
 
             res, data = client.uid("FETCH", str(uid), "(BODY.PEEK[])")
             if res != "OK" or not data:

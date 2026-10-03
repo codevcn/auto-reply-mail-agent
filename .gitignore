@@ -109,3 +109,7 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+docs/stores/
+.codex-config-link/
+temp
