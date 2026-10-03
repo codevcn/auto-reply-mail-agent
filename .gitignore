@@ -1,0 +1,111 @@
+# ==============================================================================
+# Mail Agent — .gitignore
+# CRITICAL: Prevent secret leakage, credentials, build artifacts, environments
+# ==============================================================================
+
+# --- 1. Credentials, Secrets & Tokens (NEVER COMMIT) ---
+*credentials*.md
+*credentials*.txt
+*credential*.md
+*credential*.txt
+vps-credentials.md
+proxy-credentials.md
+shopify-dev-app-credentials.md
+secrets/
+*.pem
+*.key
+*.pfx
+*.cert
+*.crt
+
+# Test suites containing dummy secret patterns flagged by GitHub Push Protection
+backend/tests/test_redaction.py
+backend/tests/test_redaction_adversarial.py
+*.png
+
+# JSON Credentials, Service Accounts & API Secrets
+*credentials*.json
+*credential*.json
+*service-account*.json
+*service_account*.json
+service-account.json
+service_account.json
+client_secret*.json
+client-credentials.json
+gcp-service-account.json
+
+# SSH & OpenSSH Private Keys
+id_rsa*
+id_ed25519*
+id_ecdsa*
+id_dsa*
+
+# Local SQLite & Test Databases
+*.sqlite
+*.sqlite3
+*.db
+
+# --- 2. Environment Variables & Secret Files ---
+*.env
+*.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env.local
+frontend/.env.*.local
+
+# --- 3. Python & Backend Artifacts ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+env/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- 4. Node.js & Frontend Artifacts ---
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- 5. Agent & Orchestration Metadata (PROJECT.md layout compliance) ---
+.agents/
+
+# --- 6. Operating System & IDE Artifacts ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

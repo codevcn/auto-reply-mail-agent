@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "./ads-tokens.css";
+@import "./tailwind-theme.css";
+
+body {
+  margin: 0;
+  font-family: var(--ds-font-family);
+  background-color: var(--ds-background-default);
+  color: var(--ds-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

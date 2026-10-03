@@ -1,0 +1,139 @@
+# ==============================================================================
+# Mail Agent — Production / VPS Docker Compose Specification
+# Production Topology: Host Nginx (:443) -> 127.0.0.1:8090 -> mail-agent-api
+# CRITICAL: PostgreSQL is isolated inside Docker network and NOT published on host.
+# Resource limits & json-file log rotation enforced (Invariants R-32, R-33, R-35).
+# ==============================================================================
+
+services:
+  mail-agent-api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: mail-agent-api:latest
+    container_name: mail-agent-api
+    restart: unless-stopped
+    ports:
+      # Bound strictly to 127.0.0.1 on host to prevent direct public exposure
+      - "127.0.0.1:8090:8090"
+    environment:
+      - ENVIRONMENT=production
+      - APP_PORT=8090
+      - APP_HOST=0.0.0.0
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-mail_agent_app}:${POSTGRES_PASSWORD:-change_me_in_production}@mail-agent-db:5432/${POSTGRES_DB:-mail_agent_db}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY}
+      - ENCRYPTION_KEY_VERSION=${ENCRYPTION_KEY_VERSION:-1}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_LOCATION=${GCP_LOCATION:-us-central1}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-sa.json
+      - RETENTION_DAYS=${RETENTION_DAYS:-120}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    env_file:
+      - .env
+    depends_on:
+      mail-agent-db:
+        condition: service_healthy
+    networks:
+      - mail-agent-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health/live')\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+        reservations:
+          cpus: "0.2"
+          memory: 256M
+
+  mail-agent-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: mail-agent-api:latest
+    container_name: mail-agent-worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.main"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-mail_agent_app}:${POSTGRES_PASSWORD:-change_me_in_production}@mail-agent-db:5432/${POSTGRES_DB:-mail_agent_db}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY}
+      - ENCRYPTION_KEY_VERSION=${ENCRYPTION_KEY_VERSION:-1}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_LOCATION=${GCP_LOCATION:-us-central1}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-sa.json
+      - RETENTION_DAYS=${RETENTION_DAYS:-120}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    env_file:
+      - .env
+    depends_on:
+      mail-agent-db:
+        condition: service_healthy
+    networks:
+      - mail-agent-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+        reservations:
+          cpus: "0.2"
+          memory: 256M
+
+  mail-agent-db:
+    image: postgres:16-alpine
+    container_name: mail-agent-db
+    restart: unless-stopped
+    # Port 5432 is strictly NOT mapped to host to prevent any host conflict
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mail_agent_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+      POSTGRES_DB: ${POSTGRES_DB:-mail_agent_db}
+    volumes:
+      - mail_agent_pgdata:/var/lib/postgresql/data
+    networks:
+      - mail-agent-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mail_agent_app} -d ${POSTGRES_DB:-mail_agent_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+networks:
+  mail-agent-net:
+    name: mail-agent-net
+    driver: bridge
+
+volumes:
+  mail_agent_pgdata:
+    name: mail_agent_pgdata

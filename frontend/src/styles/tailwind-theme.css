@@ -1,0 +1,41 @@
+/**
+ * Mapping ADS semantic tokens to Tailwind v4 @theme
+ */
+@theme {
+  --color-surface: var(--ds-background-default);
+  --color-surface-sunken: var(--ds-background-sunken);
+  --color-surface-subtle: var(--ds-background-subtle);
+  --color-surface-neutral: var(--ds-background-neutral);
+  --color-surface-neutral-hover: var(--ds-background-neutral-hovered);
+  --color-surface-neutral-pressed: var(--ds-background-neutral-pressed);
+  --color-surface-selected: var(--ds-background-selected);
+
+  --color-brand: var(--ds-background-brand-bold);
+  --color-brand-hover: var(--ds-background-brand-bold-hovered);
+  --color-brand-pressed: var(--ds-background-brand-bold-pressed);
+
+  --color-danger-subtle: var(--ds-background-danger);
+  --color-danger-bold: var(--ds-background-danger-bold);
+  --color-danger-hover: var(--ds-background-danger-bold-hovered);
+
+  --color-warning-subtle: var(--ds-background-warning);
+  --color-warning-bold: var(--ds-background-warning-bold);
+
+  --color-success-subtle: var(--ds-background-success);
+  --color-success-bold: var(--ds-background-success-bold);
+
+  --color-text-default: var(--ds-text);
+  --color-text-subtle: var(--ds-text-subtle);
+  --color-text-subtlest: var(--ds-text-subtlest);
+  --color-text-inverse: var(--ds-text-inverse);
+  --color-text-brand: var(--ds-text-brand);
+  --color-text-danger: var(--ds-text-danger);
+  --color-text-warning: var(--ds-text-warning);
+  --color-text-success: var(--ds-text-success);
+
+  --color-border-default: var(--ds-border);
+  --color-border-focused: var(--ds-border-focused);
+  --color-border-danger: var(--ds-border-danger);
+  --color-border-warning: var(--ds-border-warning);
+  --color-border-success: var(--ds-border-success);
+}
